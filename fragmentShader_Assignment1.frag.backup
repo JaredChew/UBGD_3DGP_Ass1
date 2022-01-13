@@ -1,0 +1,215 @@
+#define WINDOW_WIDTH 2000.0
+#define WINDOW_HEIGHT 1600.0
+
+#define CIRCLULAR_WAVE_RADIUS 0.0001 * (WINDOW_WIDTH * WINDOW_HEIGHT) //7.0
+#define CIRCLULAR_WAVE_INTENSITY 30.0
+#define CIRCLULAR_WAVE_FREQUENCY_SMOOTHER 30.0 //50.0
+#define CIRCLULAR_WAVE_START_POS_Y WINDOW_HEIGHT / 2.0
+#define CIRCLULAR_WAVE_START_POS_X WINDOW_WIDTH / 2.0
+//#define CIRCLULAR_WAVE_RADIUS 0.0001 * (WINDOW_WIDTH * WINDOW_HEIGHT) //200.0
+#define CIRCLULAR_WAVE_HOLLOW_RADIUS 0.7 * CIRCLULAR_WAVE_RADIUS
+
+#define CIRCLE_AMOUNT 5
+#define CIRCLE_BASE_DISTANCE 270.0
+#define CIRCLE_RADIUS 100.0
+#define CIRCLE_CENTER_X WINDOW_WIDTH / 2.0
+#define CIRCLE_CENTER_Y WINDOW_HEIGHT / 2.0
+
+#define BACKGROUND_EFFECT_SHARPNESS 0.07
+
+#define ROTATE_SPEED_MUL 10.0
+
+precision mediump float;
+
+varying vec2 fTexCoord;
+
+uniform sampler2D sampler2d;
+
+uniform float averageAudioBeat;
+uniform float averageBaseBeat;
+uniform float averageHighBeat;
+uniform float averageMidBeat;
+
+uniform float circleRotation;
+
+uniform float incrementingVariable;
+
+float degreeToRadian(float degreeAngle) {
+
+	return degreeAngle * (3.141592654 / 180.0);
+
+}
+
+float roundOffZerosInFloatDecimal(float toRound) {
+
+	while (toRound < 0.09) {
+
+		toRound *= 10.0;
+
+	}
+
+	return toRound;
+
+}
+
+bool wave(inout vec4 toMix) {
+
+	vec4 colour = vec4( 0.3, 0.5, 0.7, 1.0 );
+
+	//float wavePositionY = (WINDOW_HEIGHT / 2.0) + (sin((gl_FragCoord.x + (incrementingVariable * 3.0)) / CIRCLULAR_WAVE_FREQUENCY_SMOOTHER) * sin(incrementingVariable * 1.0) * CIRCLULAR_WAVE_INTENSITY); //original
+
+	float waveMovement = sin((gl_FragCoord.x + (incrementingVariable * ROTATE_SPEED_MUL)) / CIRCLULAR_WAVE_FREQUENCY_SMOOTHER); //default
+	//float waveMovement = sin(gl_FragCoord.x / CIRCLULAR_WAVE_FREQUENCY_SMOOTHER); //static
+	//float waveMovement = sin( (gl_FragCoord.x + incrementingVariable) / averageAudioBeat ); //combine (causes very high frequencies)
+	//float waveMovement = sin( (gl_FragCoord.x + (incrementingVariable * 5.0)) / (averageMidBeatRounded * 100.0) );
+	//float waveMovement = sin((gl_FragCoord.x + (incrementingVariable * 10.0)) / averageMidBeat); //mid beat
+
+	// ** Add abs() to distort the circle more ** //
+	//float waveThickness = sin(incrementingVariable * 1.0) * CIRCLULAR_WAVE_INTENSITY; //default
+	//float waveThickness = sin(gl_FragCoord.x + (incrementingVariable * 1.0)) * CIRCLULAR_WAVE_INTENSITY; //helix
+	//float waveThickness = sin(gl_FragCoord.x + incrementingVariable) * (averageBaseBeat >= 0.5 ? averageBaseBeat * 1000.0 : CIRCLULAR_WAVE_INTENSITY); //base beat
+	//float waveThickness = sin(gl_FragCoord.x + incrementingVariable) * (averageBaseBeat * 3000.0); //base beat 2
+	//float waveThickness = sin(gl_FragCoord.x + incrementingVariable) * (averageHighBeat * 3000.0); //high beat
+	//float waveThickness = sin( gl_FragCoord.x / averageBaseBeat ) * ( averageHighBeat * 3000.0 ); //combine
+	float waveThickness = sin( gl_FragCoord.x / (averageBaseBeat * 3000.0) ) * ( averageHighBeat * 5000.0 ); //combine 2
+
+	float wavePositionY = CIRCLULAR_WAVE_START_POS_Y + (waveMovement * waveThickness);
+	//float wavePositionX = CIRCLULAR_WAVE_START_POS_X + (waveMovement * waveThickness);
+
+	//float distanceWave = sqrt(( (gl_FragCoord.x - gl_FragCoord.x) * (gl_FragCoord.x - gl_FragCoord.x) ) + ( (wavePositionY - gl_FragCoord.y) * (wavePositionY - gl_FragCoord.y) )); //default
+	//float distanceWave = sqrt( pow(wavePositionX - gl_FragCoord.x, 2.0) + pow(wavePositionY - gl_FragCoord.y, 2.0)); //XY
+	float distanceWave = sqrt( pow(CIRCLE_CENTER_X - gl_FragCoord.x, 2.0) + pow(wavePositionY - gl_FragCoord.y, 2.0)); //combine
+
+	if(distanceWave > CIRCLULAR_WAVE_RADIUS) { return false; }
+
+	toMix = colour;
+
+	return true;
+
+}
+
+bool circlularWave(inout vec4 toMix) {
+
+	vec4 colour = vec4(
+
+		mix( 0.3, 1.0, 1.0 - ( (1.0 / WINDOW_HEIGHT) * gl_FragCoord.y) ),
+		mix( 0.5, 1.0, 1.0 - ( (1.0 / WINDOW_HEIGHT) * gl_FragCoord.y) ),
+		mix( 0.7, 1.0, 1.0 - ( (1.0 / WINDOW_HEIGHT) * gl_FragCoord.y) ),
+		1.0
+
+	);
+
+	// !! CIRCLE !! //
+
+	float distanceCircle = sqrt( pow(CIRCLE_CENTER_X - gl_FragCoord.x, 2.0) + pow(CIRCLE_CENTER_Y - gl_FragCoord.y, 2.0) );
+
+	float circleSizeIncrease = averageBaseBeat * 500.0; //1500.0
+
+	// !! WAVE !! //
+
+	//float wavePositionY = (WINDOW_HEIGHT / 2.0) + (sin((gl_FragCoord.x + (incrementingVariable * 3.0)) / CIRCLULAR_WAVE_FREQUENCY_SMOOTHER) * sin(incrementingVariable * 1.0) * CIRCLULAR_WAVE_INTENSITY); //original
+
+	float waveMovement = sin((gl_FragCoord.x + (incrementingVariable * ROTATE_SPEED_MUL)) / CIRCLULAR_WAVE_FREQUENCY_SMOOTHER); //default
+	//float waveMovement = sin(gl_FragCoord.x / CIRCLULAR_WAVE_FREQUENCY_SMOOTHER); //static
+	//float waveMovement = sin( (gl_FragCoord.x + incrementingVariable) / averageAudioBeat ); //combine (causes very high frequencies)
+	//float waveMovement = sin( (gl_FragCoord.x + (incrementingVariable * 5.0)) / (averageMidBeatRounded * 100.0) );
+	//float waveMovement = sin((gl_FragCoord.x + (incrementingVariable * 10.0)) / averageMidBeat); //mid beat
+
+	// ** Add abs() to distort the circle more ** //
+	//float waveThickness = sin(incrementingVariable * 1.0) * CIRCLULAR_WAVE_INTENSITY; //default
+	//float waveThickness = sin(gl_FragCoord.x + (incrementingVariable * 1.0)) * CIRCLULAR_WAVE_INTENSITY; //helix
+	//float waveThickness = sin(gl_FragCoord.x + incrementingVariable) * (averageBaseBeat >= 0.5 ? averageBaseBeat * 1000.0 : CIRCLULAR_WAVE_INTENSITY); //base beat
+	//float waveThickness = sin(gl_FragCoord.x + incrementingVariable) * (averageBaseBeat * 3000.0); //base beat 2
+	//float waveThickness = sin(gl_FragCoord.x + incrementingVariable) * (averageHighBeat * 3000.0); //high beat
+	//float waveThickness = sin( gl_FragCoord.x / averageBaseBeat ) * ( averageHighBeat * 3000.0 ); //combine
+	float waveThickness = sin( gl_FragCoord.x / (averageBaseBeat * 3000.0) ) * ( averageHighBeat * 5000.0 ); //combine 2
+
+	float wavePositionY = CIRCLULAR_WAVE_START_POS_Y + (waveMovement * waveThickness);
+	//float wavePositionX = CIRCLULAR_WAVE_START_POS_X + (waveMovement * waveThickness);
+
+	//float distanceWave = sqrt(( (gl_FragCoord.x - gl_FragCoord.x) * (gl_FragCoord.x - gl_FragCoord.x) ) + ( (wavePositionY - gl_FragCoord.y) * (wavePositionY - gl_FragCoord.y) )); //default
+	//float distanceWave = sqrt( pow(wavePositionX - gl_FragCoord.x, 2.0) + pow(wavePositionY - gl_FragCoord.y, 2.0)); //XY
+	float distanceWave = sqrt( pow(CIRCLULAR_WAVE_START_POS_X - gl_FragCoord.x, 2.0) + pow(wavePositionY - gl_FragCoord.y, 2.0)); //combine
+
+	if(distanceWave < (CIRCLULAR_WAVE_RADIUS + circleSizeIncrease) && distanceWave > (CIRCLULAR_WAVE_HOLLOW_RADIUS + circleSizeIncrease)) {
+
+		toMix = colour;
+
+		return true;
+		
+	}
+		
+	return false;
+
+}
+
+void grayscaleCircleEffect(int numOfCircles, inout vec4 toEffect) {
+
+	for(int i = 1; i <= numOfCircles; ++i) {
+
+		float xPos = ( (CIRCLE_BASE_DISTANCE * (1.0) ) * sin( degreeToRadian( circleRotation + float( (360 / numOfCircles) * i ) ) ) ) + CIRCLE_CENTER_X;
+		float yPos = ( (CIRCLE_BASE_DISTANCE * (1.0) ) * cos( degreeToRadian( circleRotation + float( (360 / numOfCircles) * i ) ) ) ) + CIRCLE_CENTER_Y;
+
+		float distanceCircle = sqrt( pow(xPos - gl_FragCoord.x, 2.0) + pow(yPos - gl_FragCoord.y, 2.0) );
+
+		if(distanceCircle <= CIRCLE_RADIUS) {
+
+			float grayScale = (toEffect.r + toEffect.g + toEffect.b) / 3.0;
+
+			toEffect.r = grayScale;
+			toEffect.g = grayScale;
+			toEffect.b = grayScale;
+
+			return;
+
+		}
+
+	}
+
+}
+
+void backgroundEffect(inout vec4 toBlend) {
+
+	vec4 effect;
+
+	effect.r += abs( sin( ( gl_FragCoord.x + (incrementingVariable) ) * BACKGROUND_EFFECT_SHARPNESS) );
+	effect.g += abs( sin( ( gl_FragCoord.y + (incrementingVariable) ) * BACKGROUND_EFFECT_SHARPNESS) );
+	effect.b += abs( sin( (  (gl_FragCoord.x + gl_FragCoord.y) + (incrementingVariable) ) * BACKGROUND_EFFECT_SHARPNESS) );
+	
+	if(roundOffZerosInFloatDecimal(averageAudioBeat) >= 0.5) {
+		effect.r += abs( sin(gl_FragCoord.y) );
+		effect.g += abs( sin(gl_FragCoord.x) );
+		effect.b += abs( sin(gl_FragCoord.x + gl_FragCoord.y) );
+	}
+
+	toBlend += effect;
+
+}
+
+void main() {
+
+	//Colour and texture
+
+	vec4 toMix;
+	vec4 resultColour;
+	vec4 texColor = texture2D(sampler2d, fTexCoord);
+	//vec4 backgroundColour = vec4(0.059, 1.0, 0.867, 1.0);
+
+	//Audio spectrum
+
+	//float averageAudioBeatRounded = roundOffZerosInFloatDecimal(averageAudioBeat);
+	//float averageBaseBeatRounded = roundOffZerosInFloatDecimal(averageBaseBeat);
+	//float averageHighBeatRounded = roundOffZerosInFloatDecimal(averageHighBeat);
+	//float averageMidBeatRounded = roundOffZerosInFloatDecimal(averageMidBeat);
+
+	backgroundEffect(texColor);
+
+	if(circlularWave(toMix)) { resultColour = toMix; }
+	//else if(wave(toMix)) { resultColour = toMix; }
+	else { resultColour = texColor; }
+	
+	grayscaleCircleEffect(CIRCLE_AMOUNT, resultColour);
+
+	gl_FragColor = resultColour;
+
+}
