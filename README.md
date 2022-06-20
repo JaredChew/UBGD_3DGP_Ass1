@@ -2,4 +2,4 @@
 Audio Visualiser through Shaders
 
 I am not creative. I'm trying to improve my code structuring, style, and readability.
-While making a audio visualiser of course
+While making a audio visualiser of course, but this time in models. Still not good in math
